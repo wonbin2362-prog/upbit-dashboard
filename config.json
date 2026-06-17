@@ -1,0 +1,4 @@
+{
+    "tickers": ["KRW-BTC", "KRW-ETH", "KRW-WLD"],
+    "intervals": ["minute60", "day"]
+}
