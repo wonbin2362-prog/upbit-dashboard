@@ -154,8 +154,16 @@ def main():
             st.rerun()
 
         st.divider()
-        auto_refresh = st.checkbox("자동 새로고침", value=False)
-        refresh_sec = st.number_input("새로고침 주기(초)", min_value=10, value=60, step=10)
+        auto_refresh_default = st.query_params.get("auto_refresh", "0") == "1"
+        refresh_sec_default = int(st.query_params.get("refresh_sec", 60))
+
+        auto_refresh = st.checkbox("자동 새로고침", value=auto_refresh_default)
+        refresh_sec = st.number_input(
+            "새로고침 주기(초)", min_value=10, value=refresh_sec_default, step=10
+        )
+        st.query_params["auto_refresh"] = "1" if auto_refresh else "0"
+        st.query_params["refresh_sec"] = str(refresh_sec)
+
         if st.button("지금 새로고침"):
             st.cache_data.clear()
             st.rerun()
