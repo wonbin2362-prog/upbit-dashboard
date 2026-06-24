@@ -8,6 +8,7 @@ import signals
 import watchlist
 import backtest
 import categories
+import fibonacci
 
 STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_state.json")
 INTERVAL_LABELS = {
@@ -32,6 +33,13 @@ def _save_state(state):
 def _send_discord(webhook_url, content):
     response = requests.post(webhook_url, json={"content": content}, timeout=10)
     response.raise_for_status()
+
+
+def _send_discord_with_image(webhook_url, content, image_path):
+    with open(image_path, "rb") as f:
+        files = {"file": (os.path.basename(image_path), f, "image/png")}
+        response = requests.post(webhook_url, data={"content": content}, files=files, timeout=15)
+        response.raise_for_status()
 
 
 def check_and_notify(webhook_by_category):
@@ -73,7 +81,19 @@ def check_and_notify(webhook_by_category):
                     price = categories.format_price(result["close"])
                     message = f"{name} {label} {combined} (종가 {price})"
                     print(f"[알림] {message}")
-                    _send_discord(webhook_url, message)
+
+                    chart_path = None
+                    try:
+                        fib_count = fibonacci.LOOKBACK_CANDLES_BY_INTERVAL.get(interval, 60)
+                        fib_df = client.get_ohlcv(code, interval, count=fib_count)
+                        chart_path = fibonacci.render_chart(fib_df, f"{name} {label} 피보나치 조정대")
+                        _send_discord_with_image(webhook_url, message, chart_path)
+                    except Exception as e:
+                        print(f"[차트 오류] {key}: {e}")
+                        _send_discord(webhook_url, message)
+                    finally:
+                        if chart_path and os.path.exists(chart_path):
+                            os.remove(chart_path)
 
                 state[key] = combined
 

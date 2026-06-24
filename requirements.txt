@@ -5,3 +5,4 @@ streamlit
 plotly
 requests
 finance-datareader
+matplotlib
