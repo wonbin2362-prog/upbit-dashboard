@@ -50,7 +50,7 @@ def check_once():
 
                 status = (
                     f"[{cat_label} / {name} / {label}] "
-                    f"종가={categories.format_price(category, result['close'])} "
+                    f"종가={categories.format_price(result['close'])} "
                     f"RSI={result['rsi']:.1f} "
                     f"MACD={result['macd']:.2f} SIGNAL={result['macd_signal']:.2f}"
                 )
@@ -86,21 +86,21 @@ def main():
 
     list_p = sub.add_parser("list", help="감시 목록 출력")
     list_p.add_argument(
-        "category", choices=categories.CATEGORIES, help="crypto, kr_stock, us_stock"
+        "category", choices=categories.CATEGORIES, help="crypto, kr_stock"
     )
 
     add_p = sub.add_parser("add", help="감시 항목 추가")
     add_p.add_argument(
-        "category", choices=categories.CATEGORIES, help="crypto, kr_stock, us_stock"
+        "category", choices=categories.CATEGORIES, help="crypto, kr_stock"
     )
     add_p.add_argument(
         "value",
-        help="crypto: BTC 등 / kr_stock: 회사 이름(예: 삼성전자) / us_stock: 심볼(예: AAPL)",
+        help="crypto: BTC 등 / kr_stock: 회사 이름(예: 삼성전자)",
     )
 
     remove_p = sub.add_parser("remove", help="감시 항목 제거")
     remove_p.add_argument(
-        "category", choices=categories.CATEGORIES, help="crypto, kr_stock, us_stock"
+        "category", choices=categories.CATEGORIES, help="crypto, kr_stock"
     )
     remove_p.add_argument("value", help="add와 동일한 형식")
 

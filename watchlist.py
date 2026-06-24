@@ -4,7 +4,7 @@ import os
 import stock_client
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-CATEGORIES = ["crypto", "kr_stock", "us_stock"]
+CATEGORIES = ["crypto", "kr_stock"]
 
 
 def _load():
@@ -15,7 +15,6 @@ def _load():
         data = {
             "crypto": {"tickers": data["tickers"], "intervals": data["intervals"]},
             "kr_stock": {"tickers": [], "intervals": ["day"]},
-            "us_stock": {"tickers": [], "intervals": ["day"]},
         }
         _save(data)
 
@@ -61,15 +60,6 @@ def add_ticker(category, value):
             return False, f"{candidate['name']}({candidate['code']}) 는 이미 감시 목록에 있습니다."
         data["kr_stock"]["tickers"].append(candidate)
         added_label = f"{candidate['name']}({candidate['code']})"
-
-    elif category == "us_stock":
-        symbol = value.upper()
-        if symbol in data["us_stock"]["tickers"]:
-            return False, f"{symbol} 는 이미 감시 목록에 있습니다."
-        if not stock_client.is_sp500_member(symbol):
-            return False, f"{symbol} 는 S&P500 종목이 아닙니다."
-        data["us_stock"]["tickers"].append(symbol)
-        added_label = symbol
 
     else:
         raise ValueError(f"알 수 없는 카테고리: {category}")

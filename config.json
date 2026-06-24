@@ -19,11 +19,5 @@
         "intervals": [
             "day"
         ]
-    },
-    "us_stock": {
-        "tickers": [],
-        "intervals": [
-            "day"
-        ]
     }
 }

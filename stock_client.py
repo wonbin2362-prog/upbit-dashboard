@@ -4,7 +4,6 @@ import pandas as pd
 import FinanceDataReader as fdr
 
 _kr_listing_cache = None
-_sp500_listing_cache = None
 
 
 def get_ohlcv(ticker, interval, count=200):
@@ -26,13 +25,6 @@ def _get_kr_listing():
     return _kr_listing_cache
 
 
-def _get_sp500_listing():
-    global _sp500_listing_cache
-    if _sp500_listing_cache is None:
-        _sp500_listing_cache = fdr.StockListing("S&P500")
-    return _sp500_listing_cache
-
-
 def find_kr_ticker_by_name(name):
     """회사 이름으로 한국 주식 종목을 검색해 {"code", "name"} 후보 목록을 반환한다.
 
@@ -49,8 +41,3 @@ def find_kr_ticker_by_name(name):
         {"code": row["Code"], "name": row["Name"]}
         for _, row in matches[["Code", "Name"]].iterrows()
     ]
-
-
-def is_sp500_member(symbol):
-    listing = _get_sp500_listing()
-    return symbol.upper() in listing["Symbol"].str.upper().values

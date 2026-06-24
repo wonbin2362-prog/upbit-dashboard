@@ -68,7 +68,7 @@ def _fetch_one(category, ticker, interval):
     return {
         "종목": name,
         "주기": label,
-        "종가": categories.format_price(category, result["close"]),
+        "종가": categories.format_price(result["close"]),
         "RSI": round(result["rsi"], 1),
         "MACD": round(result["macd"], 2),
         "SIGNAL": round(result["macd_signal"], 2),
@@ -216,8 +216,6 @@ def render_stock_manager(category, add_label, add_help):
 def render_category_tab(category):
     if category == "kr_stock":
         render_stock_manager(category, "추가할 종목 (회사 이름, 예: 삼성전자)", "정확한 회사 이름으로 검색합니다.")
-    elif category == "us_stock":
-        render_stock_manager(category, "추가할 심볼 (예: AAPL)", "S&P500 구성 종목만 추가할 수 있습니다.")
 
     tickers = watchlist.get_tickers(category)
     intervals = watchlist.get_intervals(category)
@@ -259,14 +257,12 @@ def main():
     render_crypto_sidebar()
     auto_refresh, refresh_sec = render_auto_refresh_sidebar()
 
-    tab_crypto, tab_kr, tab_us = st.tabs(["코인", "한국주식", "미국주식(S&P500)"])
+    tab_crypto, tab_kr = st.tabs(["코인", "한국주식"])
 
     with tab_crypto:
         render_category_tab("crypto")
     with tab_kr:
         render_category_tab("kr_stock")
-    with tab_us:
-        render_category_tab("us_stock")
 
     if auto_refresh:
         st.caption(f"{refresh_sec}초마다 자동으로 새로고침됩니다.")

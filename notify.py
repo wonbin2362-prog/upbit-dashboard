@@ -70,7 +70,7 @@ def check_and_notify(webhook_by_category):
 
                 if combined in ALERT_SIGNALS and combined != prev_signal:
                     label = INTERVAL_LABELS.get(interval, interval)
-                    price = categories.format_price(category, result["close"])
+                    price = categories.format_price(result["close"])
                     message = f"{name} {label} {combined} (종가 {price})"
                     print(f"[알림] {message}")
                     _send_discord(webhook_url, message)
@@ -91,6 +91,5 @@ if __name__ == "__main__":
         {
             "crypto": crypto_webhook,
             "kr_stock": stock_webhook,
-            "us_stock": stock_webhook,
         }
     )
