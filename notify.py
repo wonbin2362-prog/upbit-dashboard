@@ -34,10 +34,14 @@ def _send_discord(webhook_url, content):
     response.raise_for_status()
 
 
-def check_and_notify(webhook_url):
+def check_and_notify(webhook_by_category):
     state = _load_state()
 
     for category in categories.CATEGORIES:
+        webhook_url = webhook_by_category.get(category)
+        if not webhook_url:
+            continue
+
         tickers = watchlist.get_tickers(category)
         intervals = watchlist.get_intervals(category)
         client = categories.CLIENT_BY_CATEGORY[category]
@@ -77,7 +81,16 @@ def check_and_notify(webhook_url):
 
 
 if __name__ == "__main__":
-    webhook = os.environ.get("DISCORD_WEBHOOK_URL")
-    if not webhook:
+    crypto_webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+    stock_webhook = os.environ.get("DISCORD_WEBHOOK_URL_STOCK") or crypto_webhook
+
+    if not crypto_webhook:
         raise SystemExit("DISCORD_WEBHOOK_URL 환경변수가 설정되어 있지 않습니다.")
-    check_and_notify(webhook)
+
+    check_and_notify(
+        {
+            "crypto": crypto_webhook,
+            "kr_stock": stock_webhook,
+            "us_stock": stock_webhook,
+        }
+    )

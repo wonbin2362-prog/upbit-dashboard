@@ -24,6 +24,7 @@ jobs:
       - name: Run notifier
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL_STOCK: ${{ secrets.DISCORD_WEBHOOK_URL_STOCK }}
         run: python notify.py
 
       - name: Commit alert state
