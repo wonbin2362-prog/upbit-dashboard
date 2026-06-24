@@ -11,7 +11,10 @@
         ]
     },
     "kr_stock": {
-        "tickers": [],
+        "tickers": [
+            {"code": "005930", "name": "삼성전자"},
+            {"code": "000660", "name": "SK하이닉스"}
+        ],
         "intervals": [
             "day"
         ]
