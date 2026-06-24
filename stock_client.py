@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import pandas as pd
 import FinanceDataReader as fdr
 
 _kr_listing_cache = None
@@ -16,9 +17,12 @@ def get_ohlcv(ticker, interval, count=200):
 
 
 def _get_kr_listing():
+    """KRX 일반 종목 + ETF 목록을 Code/Name 두 컬럼으로 합쳐서 반환한다(캐시됨)."""
     global _kr_listing_cache
     if _kr_listing_cache is None:
-        _kr_listing_cache = fdr.StockListing("KRX")
+        stocks = fdr.StockListing("KRX")[["Code", "Name"]]
+        etfs = fdr.StockListing("ETF/KR")[["Symbol", "Name"]].rename(columns={"Symbol": "Code"})
+        _kr_listing_cache = pd.concat([stocks, etfs], ignore_index=True)
     return _kr_listing_cache
 
 
