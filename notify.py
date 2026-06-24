@@ -60,12 +60,8 @@ def check_and_notify(webhook_url):
 
             if combined in ALERT_SIGNALS and combined != prev_signal:
                 label = INTERVAL_LABELS.get(interval, interval)
-                message = (
-                    f"[{ticker} / {label}] {combined}\n"
-                    f"종가: {result['close']:.2f} / RSI: {result['rsi']:.1f} / "
-                    f"MACD: {result['macd']:.2f} / SIGNAL: {result['macd_signal']:.2f}\n"
-                    f"{' / '.join(result['messages']) if result['messages'] else ''}"
-                )
+                coin = ticker.replace("KRW-", "")
+                message = f"{coin} {label} {combined} (종가 {result['close']:,.0f}원)"
                 print(f"[알림] {message}")
                 _send_discord(webhook_url, message)
 
