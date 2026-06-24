@@ -5,9 +5,9 @@ import requests
 
 import indicators
 import signals
-import upbit_client
 import watchlist
 import backtest
+import categories
 
 STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_state.json")
 INTERVAL_LABELS = {
@@ -36,36 +36,42 @@ def _send_discord(webhook_url, content):
 
 def check_and_notify(webhook_url):
     state = _load_state()
-    tickers = watchlist.get_tickers()
-    intervals = watchlist.get_intervals()
 
-    for ticker in tickers:
-        for interval in intervals:
-            key = f"{ticker}:{interval}"
-            count = backtest.BACKTEST_COUNT_BY_INTERVAL.get(interval, 200)
+    for category in categories.CATEGORIES:
+        tickers = watchlist.get_tickers(category)
+        intervals = watchlist.get_intervals(category)
+        client = categories.CLIENT_BY_CATEGORY[category]
 
-            try:
-                df = upbit_client.get_ohlcv(ticker, interval, count=count)
-                df = indicators.add_indicators(df)
-                result = signals.analyze(df)
-            except Exception as e:
-                print(f"[오류] {key}: {e}")
-                continue
+        for ticker in tickers:
+            code = categories.ticker_code(category, ticker)
+            name = categories.ticker_display_name(category, ticker)
 
-            if result is None:
-                continue
+            for interval in intervals:
+                key = f"{category}:{code}:{interval}"
+                count = backtest.BACKTEST_COUNT_BY_INTERVAL.get(interval, 200)
 
-            combined = result["combined_signal"]
-            prev_signal = state.get(key)
+                try:
+                    df = client.get_ohlcv(code, interval, count=count)
+                    df = indicators.add_indicators(df)
+                    result = signals.analyze(df)
+                except Exception as e:
+                    print(f"[오류] {key}: {e}")
+                    continue
 
-            if combined in ALERT_SIGNALS and combined != prev_signal:
-                label = INTERVAL_LABELS.get(interval, interval)
-                coin = ticker.replace("KRW-", "")
-                message = f"{coin} {label} {combined} (종가 {result['close']:,.0f}원)"
-                print(f"[알림] {message}")
-                _send_discord(webhook_url, message)
+                if result is None:
+                    continue
 
-            state[key] = combined
+                combined = result["combined_signal"]
+                prev_signal = state.get(key)
+
+                if combined in ALERT_SIGNALS and combined != prev_signal:
+                    label = INTERVAL_LABELS.get(interval, interval)
+                    price = categories.format_price(category, result["close"])
+                    message = f"{name} {label} {combined} (종가 {price})"
+                    print(f"[알림] {message}")
+                    _send_discord(webhook_url, message)
+
+                state[key] = combined
 
     _save_state(state)
 

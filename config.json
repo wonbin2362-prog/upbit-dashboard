@@ -1,4 +1,25 @@
 {
-    "tickers": ["KRW-BTC", "KRW-ETH", "KRW-WLD"],
-    "intervals": ["minute60", "day"]
+    "crypto": {
+        "tickers": [
+            "KRW-BTC",
+            "KRW-ETH",
+            "KRW-WLD"
+        ],
+        "intervals": [
+            "minute60",
+            "day"
+        ]
+    },
+    "kr_stock": {
+        "tickers": [],
+        "intervals": [
+            "day"
+        ]
+    },
+    "us_stock": {
+        "tickers": [],
+        "intervals": [
+            "day"
+        ]
+    }
 }

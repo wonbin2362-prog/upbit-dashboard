@@ -6,35 +6,38 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 import watchlist
-import upbit_client
 import indicators
 import signals
 import backtest
+import categories
 
 INTERVAL_LABELS = {
     "minute60": "1시간봉",
     "day": "일봉",
 }
 
-st.set_page_config(page_title="업비트 RSI/MACD 대시보드", layout="wide")
+st.set_page_config(page_title="코인/주식 RSI/MACD 대시보드", layout="wide")
 
 
 @st.cache_data(ttl=300)
-def load_analysis(ticker, interval):
+def load_analysis(category, code, interval):
+    client = categories.CLIENT_BY_CATEGORY[category]
     count = backtest.BACKTEST_COUNT_BY_INTERVAL.get(interval, 200)
-    df = upbit_client.get_ohlcv(ticker, interval, count=count)
+    df = client.get_ohlcv(code, interval, count=count)
     df = indicators.add_indicators(df)
     result = signals.analyze(df)
     return df, result
 
 
-def _fetch_one(ticker, interval):
+def _fetch_one(category, ticker, interval):
+    code = categories.ticker_code(category, ticker)
+    name = categories.ticker_display_name(category, ticker)
     label = INTERVAL_LABELS.get(interval, interval)
     try:
-        _, result = load_analysis(ticker, interval)
+        _, result = load_analysis(category, code, interval)
     except Exception as e:
         return {
-            "코인": ticker,
+            "종목": name,
             "주기": label,
             "종가": None,
             "RSI": None,
@@ -63,9 +66,9 @@ def _fetch_one(ticker, interval):
             win_text = "데이터 부족"
 
     return {
-        "코인": ticker,
+        "종목": name,
         "주기": label,
-        "종가": result["close"],
+        "종가": categories.format_price(category, result["close"]),
         "RSI": round(result["rsi"], 1),
         "MACD": round(result["macd"], 2),
         "SIGNAL": round(result["macd_signal"], 2),
@@ -75,8 +78,8 @@ def _fetch_one(ticker, interval):
     }
 
 
-def build_summary_rows(tickers, intervals):
-    pairs = [(ticker, interval) for ticker in tickers for interval in intervals]
+def build_summary_rows(category, tickers, intervals):
+    pairs = [(category, ticker, interval) for ticker in tickers for interval in intervals]
     with ThreadPoolExecutor(max_workers=min(8, len(pairs))) as executor:
         results = list(executor.map(lambda p: _fetch_one(*p), pairs))
     rows = [r for r in results if r is not None]
@@ -96,8 +99,8 @@ def highlight_signal(row):
     return [""] * len(row)
 
 
-def render_chart(ticker, interval):
-    df, _ = load_analysis(ticker, interval)
+def render_chart(category, code, interval):
+    df, _ = load_analysis(category, code, interval)
 
     fig = make_subplots(
         rows=3,
@@ -133,26 +136,31 @@ def render_chart(ticker, interval):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def main():
-    st.title("업비트 RSI / MACD 대시보드")
-
+def render_crypto_sidebar():
     with st.sidebar:
         st.header("감시 코인 관리")
-        tickers = watchlist.get_tickers()
+        tickers = watchlist.get_tickers("crypto")
         st.write("현재 목록:", ", ".join(tickers))
 
         new_ticker = st.text_input("추가할 코인 (예: SOL)")
-        if st.button("추가"):
-            watchlist.add_ticker(new_ticker)
-            st.cache_data.clear()
-            st.rerun()
+        if st.button("추가", key="crypto_add"):
+            ok, message = watchlist.add_ticker("crypto", new_ticker)
+            (st.success if ok else st.error)(message)
+            if ok:
+                st.cache_data.clear()
+                st.rerun()
 
         remove_target = st.selectbox("삭제할 코인", options=tickers if tickers else ["-"])
-        if st.button("삭제") and tickers:
-            watchlist.remove_ticker(remove_target)
-            st.cache_data.clear()
-            st.rerun()
+        if st.button("삭제", key="crypto_remove") and tickers:
+            ok, message = watchlist.remove_ticker("crypto", remove_target)
+            (st.success if ok else st.error)(message)
+            if ok:
+                st.cache_data.clear()
+                st.rerun()
 
+
+def render_auto_refresh_sidebar():
+    with st.sidebar:
         st.divider()
         auto_refresh_default = st.query_params.get("auto_refresh", "0") == "1"
         refresh_sec_default = int(st.query_params.get("refresh_sec", 60))
@@ -168,29 +176,97 @@ def main():
             st.cache_data.clear()
             st.rerun()
 
-    tickers = watchlist.get_tickers()
-    intervals = watchlist.get_intervals()
+    return auto_refresh, refresh_sec
+
+
+def render_stock_manager(category, add_label, add_help):
+    tickers = watchlist.get_tickers(category)
+    display_list = ", ".join(categories.ticker_display_name(category, t) for t in tickers)
+    st.write("현재 목록:", display_list if tickers else "(없음)")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        new_value = st.text_input(add_label, help=add_help, key=f"{category}_input")
+    with col2:
+        st.write("")
+        st.write("")
+        if st.button("추가", key=f"{category}_add") and new_value:
+            ok, message = watchlist.add_ticker(category, new_value)
+            (st.success if ok else st.error)(message)
+            if ok:
+                st.cache_data.clear()
+                st.rerun()
+
+    if tickers:
+        remove_target = st.selectbox(
+            "삭제할 종목",
+            options=tickers,
+            format_func=lambda t: categories.ticker_display_name(category, t),
+            key=f"{category}_remove_select",
+        )
+        if st.button("삭제", key=f"{category}_remove"):
+            remove_value = remove_target["code"] if category == "kr_stock" else remove_target
+            ok, message = watchlist.remove_ticker(category, remove_value)
+            (st.success if ok else st.error)(message)
+            if ok:
+                st.cache_data.clear()
+                st.rerun()
+
+
+def render_category_tab(category):
+    if category == "kr_stock":
+        render_stock_manager(category, "추가할 종목 (회사 이름, 예: 삼성전자)", "정확한 회사 이름으로 검색합니다.")
+    elif category == "us_stock":
+        render_stock_manager(category, "추가할 심볼 (예: AAPL)", "S&P500 구성 종목만 추가할 수 있습니다.")
+
+    tickers = watchlist.get_tickers(category)
+    intervals = watchlist.get_intervals(category)
 
     if not tickers:
-        st.info("감시 중인 코인이 없습니다. 사이드바에서 추가해주세요.")
+        st.info("감시 중인 종목이 없습니다. 위에서 추가해주세요.")
         return
 
     st.subheader("요약")
     with st.spinner("데이터를 불러오는 중입니다... (처음 로딩은 몇 초 걸릴 수 있어요)"):
-        summary_df = build_summary_rows(tickers, intervals)
+        summary_df = build_summary_rows(category, tickers, intervals)
     if not summary_df.empty:
         st.dataframe(summary_df.style.apply(highlight_signal, axis=1), use_container_width=True)
 
     st.subheader("상세 차트")
     col1, col2 = st.columns(2)
     with col1:
-        sel_ticker = st.selectbox("코인 선택", options=tickers)
+        sel_ticker = st.selectbox(
+            "종목 선택",
+            options=tickers,
+            format_func=lambda t: categories.ticker_display_name(category, t),
+            key=f"{category}_chart_ticker",
+        )
     with col2:
         sel_interval = st.selectbox(
-            "주기 선택", options=intervals, format_func=lambda x: INTERVAL_LABELS.get(x, x)
+            "주기 선택",
+            options=intervals,
+            format_func=lambda x: INTERVAL_LABELS.get(x, x),
+            key=f"{category}_chart_interval",
         )
+    sel_code = categories.ticker_code(category, sel_ticker)
     with st.spinner("차트를 그리는 중입니다..."):
-        render_chart(sel_ticker, sel_interval)
+        render_chart(category, sel_code, sel_interval)
+
+
+def main():
+    st.title("코인 / 주식 RSI · MACD 대시보드")
+
+    render_crypto_sidebar()
+    auto_refresh, refresh_sec = render_auto_refresh_sidebar()
+
+    tab_crypto, tab_kr, tab_us = st.tabs(["코인", "한국주식", "미국주식(S&P500)"])
+
+    with tab_crypto:
+        render_category_tab("crypto")
+    with tab_kr:
+        render_category_tab("kr_stock")
+    with tab_us:
+        render_category_tab("us_stock")
 
     if auto_refresh:
         st.caption(f"{refresh_sec}초마다 자동으로 새로고침됩니다.")
