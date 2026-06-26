@@ -8,7 +8,7 @@
     "crypto:KRW-BTC:minute60": "중립",
     "crypto:KRW-BTC:day": "약한 매도",
     "crypto:KRW-ETH:minute60": "중립",
-    "crypto:KRW-ETH:day": "약한 매도",
+    "crypto:KRW-ETH:day": "중립",
     "crypto:KRW-WLD:minute60": "중립",
     "crypto:KRW-WLD:day": "중립",
     "kr_stock:005930:day": "중립",
