@@ -1,0 +1,21 @@
+name: Relay Morning Briefing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "briefing_latest.txt"
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send briefing to Discord
+        env:
+          DISCORD_WEBHOOK_URL_STOCK: ${{ secrets.DISCORD_WEBHOOK_URL_STOCK }}
+        run: |
+          jq -Rs '{content: .}' briefing_latest.txt > payload.json
+          curl -sS -f -X POST -H "Content-Type: application/json" \
+            --data-binary @payload.json "$DISCORD_WEBHOOK_URL_STOCK"
