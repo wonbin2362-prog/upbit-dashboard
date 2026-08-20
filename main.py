@@ -52,22 +52,26 @@ def check_once():
                     f"[{cat_label} / {name} / {label}] "
                     f"종가={categories.format_price(result['close'])} "
                     f"RSI={result['rsi']:.1f} "
-                    f"MACD={result['macd']:.2f} SIGNAL={result['macd_signal']:.2f}"
+                    f"MACD={result['macd']:.2f} SIGNAL={result['macd_signal']:.2f} "
+                    f"MA={result['ma_short']:.0f}/{result['ma_long']:.0f} "
+                    f"BB=[{result['bb_lower']:.0f}, {result['bb_upper']:.0f}]"
                 )
                 print(status)
 
                 combined = result["combined_signal"]
                 if combined != "중립":
+                    action = "매수" if "매수" in combined else "매도"
+                    votes = f"매수 {result['buy_votes']}표 : 매도 {result['sell_votes']}표"
                     stats = backtest.compute_winrate(result["labeled_df"], lookahead)
                     stat = stats.get(combined)
                     if stat and stat["count"] > 0:
                         print(
-                            f"  >> 종합 신호: {combined} "
+                            f"  >> 종합 신호: [{action}] {combined} ({votes}) "
                             f"(과거 {stat['count']}회 중 적중 {stat['win_rate'] * 100:.1f}%, "
                             f"평균수익률 {stat['avg_return'] * 100:.2f}%, {lookahead}캔들 기준)"
                         )
                     else:
-                        print(f"  >> 종합 신호: {combined} (과거 데이터 부족으로 통계 없음)")
+                        print(f"  >> 종합 신호: [{action}] {combined} ({votes}) (과거 데이터 부족으로 통계 없음)")
 
                 for msg in result["messages"]:
                     print(f"     - {msg}")

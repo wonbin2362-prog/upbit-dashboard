@@ -79,7 +79,14 @@ def check_and_notify(webhook_by_category):
                 if combined in ALERT_SIGNALS and combined != prev_signal:
                     label = INTERVAL_LABELS.get(interval, interval)
                     price = categories.format_price(result["close"])
-                    message = f"{name} {label} {combined} (종가 {price})"
+                    action = "매수" if "매수" in combined else "매도"
+                    emoji = "🟢" if action == "매수" else "🔴"
+                    reasons = " / ".join(result["messages"]) if result["messages"] else combined
+                    message = (
+                        f"{emoji} [{action} 신호] {name} {label}\n"
+                        f"{combined} (매수 {result['buy_votes']}표 : 매도 {result['sell_votes']}표) · 종가 {price}\n"
+                        f"근거: {reasons}"
+                    )
                     print(f"[알림] {message}")
 
                     chart_path = None

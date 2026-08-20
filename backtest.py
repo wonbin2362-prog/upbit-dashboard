@@ -10,11 +10,16 @@ SIGNAL_LABELS = ["강한 매수", "약한 매수", "강한 매도", "약한 매�
 
 
 def label_signals(df):
-    """RSI와 MACD 신호를 결합해 캔들마다 종합 신호를 매긴다."""
+    """RSI, MACD, 이동평균, 볼린저밴드 신호를 결합해 캔들마다 종합 신호를 매긴다.
+
+    지표 4개가 각각 매수/매도에 한 표씩 행사하고, 득표수로 신호 강도를 정한다.
+    3표 이상 몰리면 강한 신호, 1~2표면 약한 신호, 매수/매도 득표가 같으면(충돌) 중립으로 처리한다.
+    """
     df = df.copy()
 
     rsi_oversold = df["rsi"] <= 30
     rsi_overbought = df["rsi"] >= 70
+
     macd_cross_up = (df["macd"].shift(1) <= df["macd_signal"].shift(1)) & (
         df["macd"] > df["macd_signal"]
     )
@@ -22,11 +27,36 @@ def label_signals(df):
         df["macd"] < df["macd_signal"]
     )
 
-    strong_buy = rsi_oversold & macd_cross_up
-    strong_sell = rsi_overbought & macd_cross_down
-    weak_buy = (rsi_oversold | macd_cross_up) & ~strong_buy
-    weak_sell = (rsi_overbought | macd_cross_down) & ~strong_sell
+    ma_cross_up = (df["ma_short"].shift(1) <= df["ma_long"].shift(1)) & (
+        df["ma_short"] > df["ma_long"]
+    )
+    ma_cross_down = (df["ma_short"].shift(1) >= df["ma_long"].shift(1)) & (
+        df["ma_short"] < df["ma_long"]
+    )
 
+    bb_oversold = df["close"] <= df["bb_lower"]
+    bb_overbought = df["close"] >= df["bb_upper"]
+
+    buy_votes = (
+        rsi_oversold.astype(int)
+        + macd_cross_up.astype(int)
+        + ma_cross_up.astype(int)
+        + bb_oversold.astype(int)
+    )
+    sell_votes = (
+        rsi_overbought.astype(int)
+        + macd_cross_down.astype(int)
+        + ma_cross_down.astype(int)
+        + bb_overbought.astype(int)
+    )
+
+    strong_buy = buy_votes >= 3
+    strong_sell = sell_votes >= 3
+    weak_buy = (buy_votes > sell_votes) & ~strong_buy & (buy_votes > 0)
+    weak_sell = (sell_votes > buy_votes) & ~strong_sell & (sell_votes > 0)
+
+    df["buy_votes"] = buy_votes
+    df["sell_votes"] = sell_votes
     df["signal_label"] = np.select(
         [strong_buy, strong_sell, weak_buy, weak_sell],
         ["강한 매수", "강한 매도", "약한 매수", "약한 매도"],

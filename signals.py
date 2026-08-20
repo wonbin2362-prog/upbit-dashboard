@@ -29,12 +29,31 @@ def analyze(df):
     elif macd_cross_down:
         messages.append("MACD 데드크로스 (매도 신호)")
 
+    ma_cross_up = prev["ma_short"] <= prev["ma_long"] and last["ma_short"] > last["ma_long"]
+    ma_cross_down = prev["ma_short"] >= prev["ma_long"] and last["ma_short"] < last["ma_long"]
+
+    if ma_cross_up:
+        messages.append("이동평균 골든크로스 (매수 신호)")
+    elif ma_cross_down:
+        messages.append("이동평균 데드크로스 (매도 신호)")
+
+    if last["close"] <= last["bb_lower"]:
+        messages.append("볼린저밴드 하단 이탈 (매수 관심)")
+    elif last["close"] >= last["bb_upper"]:
+        messages.append("볼린저밴드 상단 이탈 (매도 관심)")
+
     return {
         "close": last["close"],
         "rsi": rsi_val,
         "macd": last["macd"],
         "macd_signal": last["macd_signal"],
         "macd_hist": last["macd_hist"],
+        "ma_short": last["ma_short"],
+        "ma_long": last["ma_long"],
+        "bb_upper": last["bb_upper"],
+        "bb_lower": last["bb_lower"],
+        "buy_votes": int(last["buy_votes"]),
+        "sell_votes": int(last["sell_votes"]),
         "messages": messages,
         "combined_signal": last["signal_label"],
         "labeled_df": labeled,

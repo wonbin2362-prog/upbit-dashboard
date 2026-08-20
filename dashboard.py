@@ -43,7 +43,9 @@ def _fetch_one(category, ticker, interval):
             "RSI": None,
             "MACD": None,
             "SIGNAL": None,
+            "액션": "-",
             "종합신호": f"오류: {e}",
+            "득표(매수:매도)": "-",
             "승률": "-",
             "세부": "-",
         }
@@ -65,6 +67,8 @@ def _fetch_one(category, ticker, interval):
         else:
             win_text = "데이터 부족"
 
+    action = "매수" if "매수" in combined else ("매도" if "매도" in combined else "-")
+
     return {
         "종목": name,
         "주기": label,
@@ -72,7 +76,9 @@ def _fetch_one(category, ticker, interval):
         "RSI": round(result["rsi"], 1),
         "MACD": round(result["macd"], 2),
         "SIGNAL": round(result["macd_signal"], 2),
+        "액션": action,
         "종합신호": combined,
+        "득표(매수:매도)": f"{result['buy_votes']} : {result['sell_votes']}",
         "승률": win_text,
         "세부": " / ".join(result["messages"]) if result["messages"] else "-",
     }
@@ -122,6 +128,22 @@ def render_chart(category, code, interval):
         ),
         row=1,
         col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["ma_short"], name=f"MA{indicators.MA_SHORT}", line=dict(color="#f6ad55", width=1)),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["ma_long"], name=f"MA{indicators.MA_LONG}", line=dict(color="#805ad5", width=1)),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["bb_upper"], name="BB 상단", line=dict(color="gray", width=1, dash="dot")),
+        row=1, col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=df.index, y=df["bb_lower"], name="BB 하단", line=dict(color="gray", width=1, dash="dot")),
+        row=1, col=1,
     )
 
     fig.add_trace(go.Scatter(x=df.index, y=df["rsi"], name="RSI", line=dict(color="orange")), row=2, col=1)
