@@ -9,6 +9,7 @@ import watchlist
 import backtest
 import categories
 import fibonacci
+import signal_log
 
 STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_state.json")
 INTERVAL_LABELS = {
@@ -68,6 +69,7 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
 
                 try:
                     df = client.get_ohlcv(code, interval, count=count)
+                    signal_log.resolve_pending(df, category, code, interval)
                     trend_window = indicators.TREND_WINDOW_BY_INTERVAL.get(interval, indicators.TREND_WINDOW)
                     df = indicators.add_indicators(df, trend_window=trend_window)
                     result = signals.analyze(df)
@@ -105,6 +107,14 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
                         f"{trend_line}"
                     )
                     print(f"[알림] {message}")
+
+                    lookahead = backtest.LOOKAHEAD_BY_INTERVAL.get(interval, 5)
+                    signal_log.log_alert(
+                        category, code, name, interval,
+                        candle_time=df.index[-1], action=action, signal_label=combined,
+                        buy_votes=result["buy_votes"], sell_votes=result["sell_votes"],
+                        trend=trend, close=result["close"], lookahead=lookahead,
+                    )
 
                     chart_path = None
                     try:

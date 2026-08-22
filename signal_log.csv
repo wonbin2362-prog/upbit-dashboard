@@ -1,0 +1,4 @@
+id,logged_at,category,code,name,interval,candle_time,action,signal_label,buy_votes,sell_votes,trend,close,lookahead,status,future_close,return_pct,resolved_at
+crypto:KRW-BTC:day:2026-08-22T09:00:00,2026-08-22T11:37:30.275040,crypto,KRW-BTC,BTC,day,2026-08-22T09:00:00,매도,약한 매도,0,2,상승,107735000.0,5,pending,,,
+crypto:KRW-ETH:day:2026-08-22T09:00:00,2026-08-22T11:37:33.940445,crypto,KRW-ETH,ETH,day,2026-08-22T09:00:00,매도,약한 매도,0,2,상승,3448000.0,5,pending,,,
+crypto:KRW-WLD:minute60:2026-08-22T11:00:00,2026-08-22T11:37:36.385050,crypto,KRW-WLD,WLD,minute60,2026-08-22T11:00:00,매도,약한 매도,0,2,상승,575.0,24,pending,,,
