@@ -16,6 +16,9 @@ INTERVAL_LABELS = {
     "day": "일봉",
 }
 ALERT_SIGNALS = {"강한 매수", "약한 매수", "강한 매도", "약한 매도"}
+# 신호 1개만으로는 판단이 애매해서, 카테고리별로 최소 몇 표가 모여야 알림을 보낼지 정한다.
+# (미지정 카테고리는 기본값 1표 = 기존 동작 그대로)
+MIN_VOTES_BY_CATEGORY = {"crypto": 2}
 
 
 def _load_state():
@@ -77,8 +80,11 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
 
                 combined = result["combined_signal"]
                 prev_signal = state.get(key)
+                votes = max(result["buy_votes"], result["sell_votes"])
+                min_votes = MIN_VOTES_BY_CATEGORY.get(category, 1)
+                is_alertable = combined in ALERT_SIGNALS and votes >= min_votes
 
-                if combined in ALERT_SIGNALS and combined != prev_signal:
+                if is_alertable and combined != prev_signal:
                     label = INTERVAL_LABELS.get(interval, interval)
                     price = categories.format_price(result["close"])
                     action = "매수" if "매수" in combined else "매도"
@@ -104,7 +110,10 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
                         if chart_path and os.path.exists(chart_path):
                             os.remove(chart_path)
 
-                state[key] = combined
+                # 표수 미달로 알림을 보내지 않은 경우엔 상태를 갱신하지 않는다.
+                # 그래야 나중에 표수가 채워지면(같은 신호라도) 그때 알림이 나간다.
+                if is_alertable or combined not in ALERT_SIGNALS:
+                    state[key] = combined
 
     _save_state(state)
 

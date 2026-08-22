@@ -4,6 +4,8 @@ MA_SHORT = 5
 MA_LONG = 20
 BB_PERIOD = 20
 BB_STD = 2
+ICHIMOKU_TENKAN = 9
+ICHIMOKU_KIJUN = 26
 
 
 def rsi(df, period=14):
@@ -50,6 +52,12 @@ def bollinger_bands(df, period=BB_PERIOD, num_std=BB_STD):
     )
 
 
+def ichimoku(df, tenkan=ICHIMOKU_TENKAN, kijun=ICHIMOKU_KIJUN):
+    tenkan_sen = (df["high"].rolling(tenkan).max() + df["low"].rolling(tenkan).min()) / 2
+    kijun_sen = (df["high"].rolling(kijun).max() + df["low"].rolling(kijun).min()) / 2
+    return pd.DataFrame({"ichimoku_tenkan": tenkan_sen, "ichimoku_kijun": kijun_sen})
+
+
 def add_indicators(
     df,
     rsi_period=14,
@@ -60,6 +68,8 @@ def add_indicators(
     ma_long=MA_LONG,
     bb_period=BB_PERIOD,
     bb_std=BB_STD,
+    ichimoku_tenkan=ICHIMOKU_TENKAN,
+    ichimoku_kijun=ICHIMOKU_KIJUN,
 ):
     out = df.copy()
     out["rsi"] = rsi(out, period=rsi_period)
@@ -77,5 +87,9 @@ def add_indicators(
     out["bb_mid"] = bb_df["bb_mid"]
     out["bb_upper"] = bb_df["bb_upper"]
     out["bb_lower"] = bb_df["bb_lower"]
+
+    ichimoku_df = ichimoku(out, tenkan=ichimoku_tenkan, kijun=ichimoku_kijun)
+    out["ichimoku_tenkan"] = ichimoku_df["ichimoku_tenkan"]
+    out["ichimoku_kijun"] = ichimoku_df["ichimoku_kijun"]
 
     return out

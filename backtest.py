@@ -10,9 +10,9 @@ SIGNAL_LABELS = ["강한 매수", "약한 매수", "강한 매도", "약한 매�
 
 
 def label_signals(df):
-    """RSI, MACD, 이동평균, 볼린저밴드 신호를 결합해 캔들마다 종합 신호를 매긴다.
+    """RSI, MACD, 이동평균, 볼린저밴드, 일목균형표 신호를 결합해 캔들마다 종합 신호를 매긴다.
 
-    지표 4개가 각각 매수/매도에 한 표씩 행사하고, 득표수로 신호 강도를 정한다.
+    지표 5개가 각각 매수/매도에 한 표씩 행사하고, 득표수로 신호 강도를 정한다.
     3표 이상 몰리면 강한 신호, 1~2표면 약한 신호, 매수/매도 득표가 같으면(충돌) 중립으로 처리한다.
     """
     df = df.copy()
@@ -37,17 +37,26 @@ def label_signals(df):
     bb_oversold = df["close"] <= df["bb_lower"]
     bb_overbought = df["close"] >= df["bb_upper"]
 
+    ichimoku_cross_up = (
+        df["ichimoku_tenkan"].shift(1) <= df["ichimoku_kijun"].shift(1)
+    ) & (df["ichimoku_tenkan"] > df["ichimoku_kijun"])
+    ichimoku_cross_down = (
+        df["ichimoku_tenkan"].shift(1) >= df["ichimoku_kijun"].shift(1)
+    ) & (df["ichimoku_tenkan"] < df["ichimoku_kijun"])
+
     buy_votes = (
         rsi_oversold.astype(int)
         + macd_cross_up.astype(int)
         + ma_cross_up.astype(int)
         + bb_oversold.astype(int)
+        + ichimoku_cross_up.astype(int)
     )
     sell_votes = (
         rsi_overbought.astype(int)
         + macd_cross_down.astype(int)
         + ma_cross_down.astype(int)
         + bb_overbought.astype(int)
+        + ichimoku_cross_down.astype(int)
     )
 
     strong_buy = buy_votes >= 3

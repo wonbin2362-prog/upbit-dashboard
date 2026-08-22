@@ -42,6 +42,14 @@ def analyze(df):
     elif last["close"] >= last["bb_upper"]:
         messages.append("볼린저밴드 상단 이탈 (매도 관심)")
 
+    ichimoku_cross_up = prev["ichimoku_tenkan"] <= prev["ichimoku_kijun"] and last["ichimoku_tenkan"] > last["ichimoku_kijun"]
+    ichimoku_cross_down = prev["ichimoku_tenkan"] >= prev["ichimoku_kijun"] and last["ichimoku_tenkan"] < last["ichimoku_kijun"]
+
+    if ichimoku_cross_up:
+        messages.append("일목균형표 전환선-기준선 골든크로스 (매수 신호)")
+    elif ichimoku_cross_down:
+        messages.append("일목균형표 전환선-기준선 데드크로스 (매도 신호)")
+
     return {
         "close": last["close"],
         "rsi": rsi_val,
@@ -52,6 +60,8 @@ def analyze(df):
         "ma_long": last["ma_long"],
         "bb_upper": last["bb_upper"],
         "bb_lower": last["bb_lower"],
+        "ichimoku_tenkan": last["ichimoku_tenkan"],
+        "ichimoku_kijun": last["ichimoku_kijun"],
         "buy_votes": int(last["buy_votes"]),
         "sell_votes": int(last["sell_votes"]),
         "messages": messages,
