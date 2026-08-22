@@ -6,6 +6,10 @@ BB_PERIOD = 20
 BB_STD = 2
 ICHIMOKU_TENKAN = 9
 ICHIMOKU_KIJUN = 26
+TREND_WINDOW = 60
+# 장기추세 판정용 이동평균 기간(캔들 개수). 봉 종류별로 비슷한 기간을 보도록 다르게 잡는다.
+# day: 60일 / minute60: 200시간(약 8일) - 참고용 정보일 뿐 알림 여부를 거르는 데는 쓰지 않는다.
+TREND_WINDOW_BY_INTERVAL = {"minute60": 200, "day": 60}
 
 
 def rsi(df, period=14):
@@ -70,6 +74,7 @@ def add_indicators(
     bb_std=BB_STD,
     ichimoku_tenkan=ICHIMOKU_TENKAN,
     ichimoku_kijun=ICHIMOKU_KIJUN,
+    trend_window=TREND_WINDOW,
 ):
     out = df.copy()
     out["rsi"] = rsi(out, period=rsi_period)
@@ -91,5 +96,7 @@ def add_indicators(
     ichimoku_df = ichimoku(out, tenkan=ichimoku_tenkan, kijun=ichimoku_kijun)
     out["ichimoku_tenkan"] = ichimoku_df["ichimoku_tenkan"]
     out["ichimoku_kijun"] = ichimoku_df["ichimoku_kijun"]
+
+    out["trend_ma"] = out["close"].rolling(trend_window).mean()
 
     return out

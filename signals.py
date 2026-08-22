@@ -1,3 +1,5 @@
+import pandas as pd
+
 import backtest
 
 RSI_OVERSOLD = 30
@@ -50,6 +52,18 @@ def analyze(df):
     elif ichimoku_cross_down:
         messages.append("일목균형표 전환선-기준선 데드크로스 (매도 신호)")
 
+    # 장기추세는 득표에는 반영하지 않고, 참고 정보로만 함께 보여준다.
+    trend_ma = last["trend_ma"]
+    if pd.notna(trend_ma):
+        if last["close"] > trend_ma:
+            trend = "상승"
+        elif last["close"] < trend_ma:
+            trend = "하락"
+        else:
+            trend = "중립"
+    else:
+        trend = None
+
     return {
         "close": last["close"],
         "rsi": rsi_val,
@@ -62,6 +76,8 @@ def analyze(df):
         "bb_lower": last["bb_lower"],
         "ichimoku_tenkan": last["ichimoku_tenkan"],
         "ichimoku_kijun": last["ichimoku_kijun"],
+        "trend": trend,
+        "trend_ma": trend_ma,
         "buy_votes": int(last["buy_votes"]),
         "sell_votes": int(last["sell_votes"]),
         "messages": messages,

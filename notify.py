@@ -68,7 +68,8 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
 
                 try:
                     df = client.get_ohlcv(code, interval, count=count)
-                    df = indicators.add_indicators(df)
+                    trend_window = indicators.TREND_WINDOW_BY_INTERVAL.get(interval, indicators.TREND_WINDOW)
+                    df = indicators.add_indicators(df, trend_window=trend_window)
                     result = signals.analyze(df)
                 except Exception as e:
                     print(f"[오류] {key}: {e}")
@@ -89,10 +90,19 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
                     action = "매수" if "매수" in combined else "매도"
                     emoji = "🟢" if action == "매수" else "🔴"
                     reasons = " / ".join(result["messages"]) if result["messages"] else combined
+                    trend = result.get("trend")
+                    if trend in ("상승", "하락"):
+                        trend_icon = "📈" if trend == "상승" else "📉"
+                        agrees = (action == "매수" and trend == "상승") or (action == "매도" and trend == "하락")
+                        agree_note = "✅ 신호와 같은 방향 (근거 좀 더 탄탄)" if agrees else "⚠️ 신호와 반대 방향 (주의)"
+                        trend_line = f"\n장기추세(MA{trend_window}): {trend_icon} {trend} - {agree_note}"
+                    else:
+                        trend_line = ""
                     message = (
                         f"{emoji} [{action} 신호] {name} {label}\n"
                         f"{combined} (매수 {result['buy_votes']}표 : 매도 {result['sell_votes']}표) · 종가 {price}\n"
                         f"근거: {reasons}"
+                        f"{trend_line}"
                     )
                     print(f"[알림] {message}")
 

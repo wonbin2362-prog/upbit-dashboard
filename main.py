@@ -39,7 +39,8 @@ def check_once():
                 lookahead = backtest.LOOKAHEAD_BY_INTERVAL.get(interval, 5)
                 try:
                     df = client.get_ohlcv(code, interval, count=count)
-                    df = indicators.add_indicators(df)
+                    trend_window = indicators.TREND_WINDOW_BY_INTERVAL.get(interval, indicators.TREND_WINDOW)
+                    df = indicators.add_indicators(df, trend_window=trend_window)
                     result = signals.analyze(df)
                 except Exception as e:
                     print(f"[{cat_label} / {name} / {label}] 오류: {e}")
@@ -48,13 +49,15 @@ def check_once():
                 if result is None:
                     continue
 
+                trend = result.get("trend") or "-"
                 status = (
                     f"[{cat_label} / {name} / {label}] "
                     f"종가={categories.format_price(result['close'])} "
                     f"RSI={result['rsi']:.1f} "
                     f"MACD={result['macd']:.2f} SIGNAL={result['macd_signal']:.2f} "
                     f"MA={result['ma_short']:.0f}/{result['ma_long']:.0f} "
-                    f"BB=[{result['bb_lower']:.0f}, {result['bb_upper']:.0f}]"
+                    f"BB=[{result['bb_lower']:.0f}, {result['bb_upper']:.0f}] "
+                    f"장기추세(MA{trend_window})={trend}"
                 )
                 print(status)
 
