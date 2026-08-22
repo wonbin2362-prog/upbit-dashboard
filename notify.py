@@ -17,8 +17,7 @@ INTERVAL_LABELS = {
 }
 ALERT_SIGNALS = {"강한 매수", "약한 매수", "강한 매도", "약한 매도"}
 # 신호 1개만으로는 판단이 애매해서, 카테고리별로 최소 몇 표가 모여야 알림을 보낼지 정한다.
-# (미지정 카테고리는 기본값 1표 = 기존 동작 그대로)
-MIN_VOTES_BY_CATEGORY = {"crypto": 2}
+MIN_VOTES_BY_CATEGORY = {"crypto": 2, "kr_stock": 2}
 
 
 def _load_state():
