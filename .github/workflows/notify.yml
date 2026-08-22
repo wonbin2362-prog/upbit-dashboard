@@ -28,6 +28,10 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_WEBHOOK_URL_STOCK: ${{ secrets.DISCORD_WEBHOOK_URL_STOCK }}
+          DISCORD_WEBHOOK_URL_BTC: ${{ secrets.DISCORD_WEBHOOK_URL_BTC }}
+          DISCORD_WEBHOOK_URL_ETH: ${{ secrets.DISCORD_WEBHOOK_URL_ETH }}
+          DISCORD_WEBHOOK_URL_WLD: ${{ secrets.DISCORD_WEBHOOK_URL_WLD }}
+          DISCORD_WEBHOOK_URL_HYNIX: ${{ secrets.DISCORD_WEBHOOK_URL_HYNIX }}
         run: python notify.py
 
       - name: Commit alert state

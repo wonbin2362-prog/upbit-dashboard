@@ -42,13 +42,12 @@ def _send_discord_with_image(webhook_url, content, image_path):
         response.raise_for_status()
 
 
-def check_and_notify(webhook_by_category):
+def check_and_notify(webhook_by_category, webhook_by_ticker=None):
+    webhook_by_ticker = webhook_by_ticker or {}
     state = _load_state()
 
     for category in categories.CATEGORIES:
-        webhook_url = webhook_by_category.get(category)
-        if not webhook_url:
-            continue
+        default_webhook = webhook_by_category.get(category)
 
         tickers = watchlist.get_tickers(category)
         intervals = watchlist.get_intervals(category)
@@ -57,6 +56,9 @@ def check_and_notify(webhook_by_category):
         for ticker in tickers:
             code = categories.ticker_code(category, ticker)
             name = categories.ticker_display_name(category, ticker)
+            webhook_url = webhook_by_ticker.get((category, code), default_webhook)
+            if not webhook_url:
+                continue
 
             for interval in intervals:
                 key = f"{category}:{code}:{interval}"
@@ -114,9 +116,32 @@ if __name__ == "__main__":
     if not crypto_webhook:
         raise SystemExit("DISCORD_WEBHOOK_URL 환경변수가 설정되어 있지 않습니다.")
 
+    # 코인별 전용 채널 웹훅이 설정되어 있으면 그 코인만 해당 채널로 보내고,
+    # 없으면 기존처럼 공용 crypto 채널(DISCORD_WEBHOOK_URL)로 보낸다.
+    webhook_by_ticker = {}
+    ticker_env_map = {
+        "KRW-BTC": "DISCORD_WEBHOOK_URL_BTC",
+        "KRW-ETH": "DISCORD_WEBHOOK_URL_ETH",
+        "KRW-WLD": "DISCORD_WEBHOOK_URL_WLD",
+    }
+    for ticker, env_name in ticker_env_map.items():
+        url = os.environ.get(env_name)
+        if url:
+            webhook_by_ticker[("crypto", ticker)] = url
+
+    # 한국주식도 종목별 전용 채널 웹훅이 설정되어 있으면 그 종목만 해당 채널로 보낸다.
+    stock_ticker_env_map = {
+        "000660": "DISCORD_WEBHOOK_URL_HYNIX",
+    }
+    for code, env_name in stock_ticker_env_map.items():
+        url = os.environ.get(env_name)
+        if url:
+            webhook_by_ticker[("kr_stock", code)] = url
+
     check_and_notify(
         {
             "crypto": crypto_webhook,
             "kr_stock": stock_webhook,
-        }
+        },
+        webhook_by_ticker,
     )
