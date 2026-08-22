@@ -7,6 +7,7 @@ lookahead 캔들이 지나면 자동으로 결과(win/loss)가 채워진다.
     python analyze_signal_log.py
 """
 import io
+import math
 import sys
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -14,6 +15,26 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 import pandas as pd
 
 import signal_log
+
+Z_95 = 1.96  # 95% 신뢰수준
+
+
+def wilson_ci(wins, n, z=Z_95):
+    """이항분포 적중률의 95% 신뢰구간(Wilson score interval). scipy 없이 계산."""
+    if n == 0:
+        return (0.0, 0.0)
+    phat = wins / n
+    denom = 1 + z**2 / n
+    center = (phat + z**2 / (2 * n)) / denom
+    margin = (z / denom) * math.sqrt(phat * (1 - phat) / n + z**2 / (4 * n**2))
+    return (max(0.0, center - margin), min(1.0, center + margin))
+
+
+def format_group(n, win):
+    wr = win / n * 100
+    low, high = wilson_ci(win, n)
+    verdict = "우연(50%)보다 유의미하게 좋음" if low > 0.5 else "우연과 통계적으로 구별 안 됨"
+    return f"표본 {n}건, 적중률 {wr:.1f}% (95% 신뢰구간 {low*100:.1f}~{high*100:.1f}%) -> {verdict}"
 
 
 def main():
@@ -41,7 +62,7 @@ def main():
         n = len(g)
         win = (g["status"] == "win").sum()
         avg_ret = g["return_pct"].mean()
-        print(f"{keys}: 표본 {n}건, 적중률 {win/n*100:.1f}%, 평균 가격변동 {avg_ret:.2f}%")
+        print(f"{keys}: {format_group(n, win)}, 평균 가격변동 {avg_ret:.2f}%")
 
     print()
     print("=== 카테고리별 합계 ===")
@@ -49,14 +70,22 @@ def main():
         n = len(g)
         win = (g["status"] == "win").sum()
         avg_ret = g["return_pct"].mean()
-        print(f"{cat}: 표본 {n}건, 적중률 {win/n*100:.1f}%, 평균 가격변동 {avg_ret:.2f}%")
+        print(f"{cat}: {format_group(n, win)}, 평균 가격변동 {avg_ret:.2f}%")
 
     print()
     print("=== 전체 합계 ===")
     n = len(resolved)
     win = (resolved["status"] == "win").sum()
     avg_ret = resolved["return_pct"].mean()
-    print(f"표본 {n}건, 적중률 {win/n*100:.1f}%, 평균 가격변동 {avg_ret:.2f}%")
+    print(f"{format_group(n, win)}, 평균 가격변동 {avg_ret:.2f}%")
+    print()
+    print(
+        "※ '유의미하게 좋음'은 95% 신뢰구간 하한이 50%를 넘는다는 뜻으로, "
+        "우연(동전 던지기)이 아니라고 통계적으로 어느 정도 확신할 수 있다는 의미입니다.\n"
+        "  표본이 적으면(수십 건) 적중률이 60~70%로 보여도 신뢰구간이 넓어서 '구별 안 됨'으로 나올 수 있습니다.\n"
+        "  또한 적중률이 통계적으로 확인되더라도, 수수료/슬리피지와 손익비(평균수익 vs 평균손실)를 "
+        "함께 봐야 실제로 돈을 버는지 알 수 있습니다."
+    )
 
 
 if __name__ == "__main__":
