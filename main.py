@@ -32,11 +32,38 @@ def check_once():
         for ticker in tickers:
             code = categories.ticker_code(category, ticker)
             name = categories.ticker_display_name(category, ticker)
+            simple_cfg = categories.SIMPLE_MA_CROSS_TICKERS.get((category, code))
 
             for interval in intervals:
                 label = INTERVAL_LABELS.get(interval, interval)
                 count = backtest.BACKTEST_COUNT_BY_INTERVAL.get(interval, 200)
                 lookahead = backtest.LOOKAHEAD_BY_INTERVAL.get(interval, 5)
+
+                if simple_cfg:
+                    if interval != simple_cfg["interval"]:
+                        continue
+                    try:
+                        df = client.get_ohlcv(code, interval, count=count)
+                        df = indicators.add_indicators(
+                            df, ma_short=simple_cfg["ma_short"], ma_long=simple_cfg["ma_long"]
+                        )
+                        ma_result = signals.analyze_ma_cross(df)
+                    except Exception as e:
+                        print(f"[{cat_label} / {name} / {label}] 오류: {e}")
+                        continue
+                    if ma_result is None:
+                        continue
+                    print(
+                        f"[{cat_label} / {name} / {label}] "
+                        f"종가={categories.format_price(ma_result['close'])} "
+                        f"MA{simple_cfg['ma_short']}={ma_result['ma_short']:.0f} "
+                        f"MA{simple_cfg['ma_long']}={ma_result['ma_long']:.0f}"
+                    )
+                    if ma_result["signal"]:
+                        action = "매수" if ma_result["signal"] == "골든크로스" else "매도"
+                        print(f"  >> 종합 신호: [{action}] {ma_result['signal']} (MA{simple_cfg['ma_short']}/MA{simple_cfg['ma_long']} 교차)")
+                    continue
+
                 try:
                     df = client.get_ohlcv(code, interval, count=count)
                     trend_window = indicators.TREND_WINDOW_BY_INTERVAL.get(interval, indicators.TREND_WINDOW)

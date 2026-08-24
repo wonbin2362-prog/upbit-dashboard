@@ -84,3 +84,35 @@ def analyze(df):
         "combined_signal": last["signal_label"],
         "labeled_df": labeled,
     }
+
+
+def analyze_ma_cross(df):
+    """df는 add_indicators()가 적용된 데이터프레임(ma_short/ma_long만 사용).
+
+    이동평균 교차 여부만 판단한다. 다른 지표는 보지 않는다.
+    """
+    if len(df) < 2:
+        return None
+
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+
+    if pd.isna(last["ma_short"]) or pd.isna(last["ma_long"]) or pd.isna(prev["ma_short"]) or pd.isna(prev["ma_long"]):
+        return None
+
+    cross_up = prev["ma_short"] <= prev["ma_long"] and last["ma_short"] > last["ma_long"]
+    cross_down = prev["ma_short"] >= prev["ma_long"] and last["ma_short"] < last["ma_long"]
+
+    if cross_up:
+        signal = "골든크로스"
+    elif cross_down:
+        signal = "데드크로스"
+    else:
+        signal = None
+
+    return {
+        "close": last["close"],
+        "ma_short": last["ma_short"],
+        "ma_long": last["ma_long"],
+        "signal": signal,
+    }

@@ -63,9 +63,70 @@ def check_and_notify(webhook_by_category, webhook_by_ticker=None):
             if not webhook_url:
                 continue
 
+            simple_cfg = categories.SIMPLE_MA_CROSS_TICKERS.get((category, code))
+
             for interval in intervals:
+                if simple_cfg and interval != simple_cfg["interval"]:
+                    continue
+
                 key = f"{category}:{code}:{interval}"
                 count = backtest.BACKTEST_COUNT_BY_INTERVAL.get(interval, 200)
+
+                if simple_cfg:
+                    try:
+                        df = client.get_ohlcv(code, interval, count=count)
+                        signal_log.resolve_pending(df, category, code, interval)
+                        df = indicators.add_indicators(
+                            df, ma_short=simple_cfg["ma_short"], ma_long=simple_cfg["ma_long"]
+                        )
+                        ma_result = signals.analyze_ma_cross(df)
+                    except Exception as e:
+                        print(f"[오류] {key}: {e}")
+                        continue
+
+                    if ma_result is None:
+                        continue
+
+                    ma_signal = ma_result["signal"]
+                    prev_signal = state.get(key)
+
+                    if ma_signal and ma_signal != prev_signal:
+                        label = INTERVAL_LABELS.get(interval, interval)
+                        price = categories.format_price(ma_result["close"])
+                        action = "매수" if ma_signal == "골든크로스" else "매도"
+                        emoji = "🟢" if action == "매수" else "🔴"
+                        message = (
+                            f"{emoji} [{action} 신호] {name} {label}\n"
+                            f"{ma_signal} (MA{simple_cfg['ma_short']}이 MA{simple_cfg['ma_long']}을 "
+                            f"{'상향' if action == '매수' else '하향'} 돌파) · 종가 {price}\n"
+                            f"MA{simple_cfg['ma_short']}={ma_result['ma_short']:.0f} / "
+                            f"MA{simple_cfg['ma_long']}={ma_result['ma_long']:.0f}"
+                        )
+                        print(f"[알림] {message}")
+
+                        lookahead = backtest.LOOKAHEAD_BY_INTERVAL.get(interval, 5)
+                        signal_log.log_alert(
+                            category, code, name, interval,
+                            candle_time=df.index[-1], action=action, signal_label=ma_signal,
+                            buy_votes=None, sell_votes=None,
+                            trend=None, close=ma_result["close"], lookahead=lookahead,
+                        )
+
+                        chart_path = None
+                        try:
+                            fib_count = fibonacci.LOOKBACK_CANDLES_BY_INTERVAL.get(interval, 60)
+                            fib_df = client.get_ohlcv(code, interval, count=fib_count)
+                            chart_path = fibonacci.render_chart(fib_df, f"{name} {label} 피보나치 조정대")
+                            _send_discord_with_image(webhook_url, message, chart_path)
+                        except Exception as e:
+                            print(f"[차트 오류] {key}: {e}")
+                            _send_discord(webhook_url, message)
+                        finally:
+                            if chart_path and os.path.exists(chart_path):
+                                os.remove(chart_path)
+
+                    state[key] = ma_signal
+                    continue
 
                 try:
                     df = client.get_ohlcv(code, interval, count=count)
